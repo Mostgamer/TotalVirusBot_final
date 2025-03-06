@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 import os
-import vt.client
+import vt
 import hashlib
 import base64
 from dotenv import load_dotenv
