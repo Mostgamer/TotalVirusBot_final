@@ -49,7 +49,7 @@ async def ping(interaction: discord.Interaction):
 @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
 async def scan_url(interaction: discord.Interaction, url: str):
     print(f"[COMMAND] URL scan requested by {interaction.user.name} (ID: {interaction.user.id}) for URL: {url}")
-    
+
     if not url.startswith(('http://', 'https://')):
         print(f"[ERROR] Invalid URL format: {url} - missing http:// or https://")
         await interaction.response.send_message("Please use a valid URL starting with http:// or https://", ephemeral=True)
@@ -64,21 +64,23 @@ async def scan_url(interaction: discord.Interaction, url: str):
         url_id = base64.urlsafe_b64encode(url_hash).decode().strip('=')
         print(f"[DEBUG] Generated URL ID: {url_id} for {url}")
 
+        # Use direct HTTP request instead of vt client to avoid timeout issues
+        print(f"[INFO] Attempting to get URL report for {url}")
+
+        headers = {"x-apikey": VT_API_KEY}
+        vt_url = f"https://www.virustotal.com/api/v3/urls/{url_id}"
+
+        # Create timeout for requests
+        timeout = aiohttp.ClientTimeout(total=30)
+
         try:
-            # Use direct HTTP request instead of vt client to avoid timeout issues
-            print(f"[INFO] Attempting to get URL report for {url}")
-            
-            # Create session and make request manually
-            async with aiohttp.ClientSession() as session:
-                headers = {"x-apikey": VT_API_KEY}
-                vt_url = f"https://www.virustotal.com/api/v3/urls/{url_id}"
-                
-                async with session.get(vt_url, headers=headers) as response:
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(vt_url, headers=headers, raise_for_status=False) as response:
                     if response.status == 200:
                         data = await response.json()
                         stats = data["data"]["attributes"]["last_analysis_stats"]
                         print(f"[SUCCESS] Got URL report. Stats: {stats}")
-                        
+
                         result = (
                             f"**Scan results for {url}**\n"
                             f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
@@ -90,15 +92,16 @@ async def scan_url(interaction: discord.Interaction, url: str):
                     elif response.status == 404:
                         print(f"[INFO] URL not found, submitting for analysis: {url}")
                         await interaction.followup.send("Submitting URL for analysis...")
-                        
+
                         # Submit URL for scanning
                         form_data = aiohttp.FormData()
                         form_data.add_field('url', url)
-                        
+
                         async with session.post(
                             "https://www.virustotal.com/api/v3/urls",
                             data=form_data,
-                            headers=headers
+                            headers=headers,
+                            raise_for_status=False
                         ) as scan_response:
                             if scan_response.status == 200:
                                 scan_data = await scan_response.json()
@@ -114,19 +117,33 @@ async def scan_url(interaction: discord.Interaction, url: str):
                         error_text = await response.text()
                         await interaction.followup.send(f"Error: {error_text}")
                         print(f"[ERROR] Failed to get URL report: {error_text}")
+        except discord.NotFound as e:
+            print(f"[ERROR] Interaction not found: {str(e)}")
+        except aiohttp.ClientError as e:
+            print(f"[ERROR] HTTP request error: {str(e)}")
+            try:
+                await interaction.followup.send(f"Error connecting to VirusTotal: {str(e)}")
+            except discord.NotFound:
+                pass
         except Exception as e:
-            await interaction.followup.send(f"Error: {str(e)}")
             print(f"[ERROR] Failed to handle URL scan: {str(e)}")
+            try:
+                await interaction.followup.send(f"Error: {str(e)}")
+            except discord.NotFound:
+                pass
     except Exception as e:
         print(f"[EXCEPTION] Unhandled error during URL scan: {str(e)}")
-        await interaction.followup.send(f"❌ Error: {str(e)}")
+        try:
+            await interaction.followup.send(f"❌ Error: {str(e)}")
+        except discord.NotFound:
+            pass
 
 @bot.tree.command(name="scanfile", description="Scan a file for malware")
 @app_commands.describe(file="The file to scan")
 @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
 async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
     print(f"[COMMAND] File scan requested by {interaction.user.name} (ID: {interaction.user.id}) for file: {file.filename} ({file.size} bytes)")
-    
+
     if file.size > 32 * 1024 * 1024:
         print(f"[ERROR] File too large: {file.filename} ({file.size} bytes)")
         await interaction.response.send_message("File size exceeds 32MB limit.", ephemeral=True)
@@ -135,7 +152,7 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
     try:
         await interaction.response.defer()
         print(f"[INFO] Response deferred for file scan of {file.filename}")
-        
+
         file_content = await file.read()
         sha256 = hashlib.sha256(file_content).hexdigest()
         print(f"[DEBUG] File SHA256: {sha256}")
@@ -143,18 +160,18 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
         try:
             # Use direct HTTP request instead of vt client to avoid timeout issues
             print(f"[INFO] Attempting to get file report for {file.filename}")
-            
+
             # Create session and make request manually
             async with aiohttp.ClientSession() as session:
                 headers = {"x-apikey": VT_API_KEY}
                 vt_url = f"https://www.virustotal.com/api/v3/files/{sha256}"
-                
+
                 async with session.get(vt_url, headers=headers) as response:
                     if response.status == 200:
                         data = await response.json()
                         stats = data["data"]["attributes"]["last_analysis_stats"]
                         print(f"[SUCCESS] Got file report. Stats: {stats}")
-                        
+
                         result = (
                             f"**Scan results for {file.filename}**\n"
                             f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
@@ -166,11 +183,11 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                     elif response.status == 404:
                         print(f"[INFO] File not found, submitting for analysis: {file.filename}")
                         await interaction.followup.send("Submitting file for analysis...")
-                        
+
                         # Submit file for scanning
                         form_data = aiohttp.FormData()
                         form_data.add_field('file', file_content, filename=file.filename)
-                        
+
                         async with session.post(
                             "https://www.virustotal.com/api/v3/files",
                             data=form_data,
@@ -200,7 +217,7 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
 @bot.tree.error
 async def on_app_command_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
     print(f"[ERROR] Command error for {interaction.command.name if interaction.command else 'unknown command'}: {str(error)}")
-    
+
     if isinstance(error, app_commands.CommandOnCooldown):
         print(f"[COOLDOWN] User {interaction.user.name} hit cooldown: {error.retry_after:.1f}s remaining")
         await interaction.response.send_message(
