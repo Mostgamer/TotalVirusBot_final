@@ -37,13 +37,17 @@ async def on_ready():
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
+        # Log each command that was synced
+        for command in synced:
+            print(f"Registered command: /{command.name}")
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
 @bot.tree.command(name="ping", description="Check bot's latency")
 async def ping(interaction: discord.Interaction):
     latency = round(bot.latency * 1000)  # Convert to milliseconds
-    await interaction.response.send_message(f"pong! bitch ({latency}ms)")
+    print(f"Ping command executed by {interaction.user.name} with latency {latency}ms")
+    await interaction.response.send_message(f"pong! ({latency}ms)")
 
 @bot.tree.command(name="scan", description="Scan a URL for malware")
 @app_commands.describe(url="The URL to scan")
