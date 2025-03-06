@@ -82,7 +82,7 @@ async def scan_url(interaction: discord.Interaction, url: str):
 
                         # Create an embed with the scan results
                         embed = discord.Embed(
-                            title=f"Scan results for {url}",
+                            title="Results",
                             color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
                         )
                         
@@ -126,7 +126,7 @@ async def scan_url(interaction: discord.Interaction, url: str):
                                 
                                 # Create an embed for submission
                                 embed = discord.Embed(
-                                    title="Analysis submitted!",
+                                    title="Results",
                                     description="The URL has been submitted for analysis.",
                                     color=0x3366FF,
                                     url=analysis_url
@@ -205,7 +205,7 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
 
                         # Create an embed with the scan results
                         embed = discord.Embed(
-                            title=f"Scan results for {file.filename}",
+                            title="Results",
                             color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
                         )
                         
@@ -248,7 +248,7 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                                 
                                 # Create an embed for submission
                                 embed = discord.Embed(
-                                    title="Analysis submitted!",
+                                    title="Results",
                                     description="The file has been submitted for analysis.",
                                     color=0x3366FF,
                                     url=analysis_url
