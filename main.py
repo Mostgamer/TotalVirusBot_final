@@ -16,7 +16,7 @@ intents.messages = True
 intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents)
-vt_client = vt.Client(VT_API_KEY)
+vt_client = vt.client.Client(VT_API_KEY)
 
 @bot.event
 async def on_ready():
