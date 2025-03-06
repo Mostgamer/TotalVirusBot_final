@@ -6,6 +6,7 @@ import hashlib
 import base64
 from dotenv import load_dotenv
 import vt
+import aiohttp
 
 load_dotenv()
 
@@ -64,39 +65,58 @@ async def scan_url(interaction: discord.Interaction, url: str):
         print(f"[DEBUG] Generated URL ID: {url_id} for {url}")
 
         try:
-            # Run synchronous method in an async way
+            # Use direct HTTP request instead of vt client to avoid timeout issues
             print(f"[INFO] Attempting to get URL report for {url}")
-            def get_url_report():
-                return vt_client.get_object(f"/urls/{url_id}")
-                
-            url_report = await bot.loop.run_in_executor(None, get_url_report)
-            stats = url_report.last_analysis_stats
-            print(f"[SUCCESS] Got URL report. Stats: {stats}")
             
-            result = (
-                f"**Scan results for {url}**\n"
-                f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
-                f"✅ **Undetected**: {stats.get('undetected', 0)}\n"
-                f"🔗 [View on VirusTotal]({url_report.url})"
-            )
-            await interaction.followup.send(result)
-            print(f"[RESPONSE] Sent URL scan results to {interaction.user.name}")
-        except vt.APIError as e:
-            print(f"[API ERROR] {e.code}: {e.message}")
-            if e.code == 'NotFoundError':
-                print(f"[INFO] URL not found, submitting for analysis: {url}")
-                await interaction.followup.send("Submitting URL for analysis...")
-                # Use synchronous method with run_in_executor
-                def scan_url_task():
-                    return vt_client.scan_url(url)
-                    
-                analysis = await bot.loop.run_in_executor(None, scan_url_task)
-                analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
-                await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
-                print(f"[SUCCESS] URL submitted for analysis. Analysis ID: {analysis.id}")
-            else:
-                await interaction.followup.send(f"Error: {e.message}")
-                print(f"[ERROR] Failed to handle URL scan: {e.message}")
+            # Create session and make request manually
+            async with aiohttp.ClientSession() as session:
+                headers = {"x-apikey": VT_API_KEY}
+                vt_url = f"https://www.virustotal.com/api/v3/urls/{url_id}"
+                
+                async with session.get(vt_url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        stats = data["data"]["attributes"]["last_analysis_stats"]
+                        print(f"[SUCCESS] Got URL report. Stats: {stats}")
+                        
+                        result = (
+                            f"**Scan results for {url}**\n"
+                            f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
+                            f"✅ **Undetected**: {stats.get('undetected', 0)}\n"
+                            f"🔗 [View on VirusTotal](https://www.virustotal.com/gui/url/{url_id})"
+                        )
+                        await interaction.followup.send(result)
+                        print(f"[RESPONSE] Sent URL scan results to {interaction.user.name}")
+                    elif response.status == 404:
+                        print(f"[INFO] URL not found, submitting for analysis: {url}")
+                        await interaction.followup.send("Submitting URL for analysis...")
+                        
+                        # Submit URL for scanning
+                        form_data = aiohttp.FormData()
+                        form_data.add_field('url', url)
+                        
+                        async with session.post(
+                            "https://www.virustotal.com/api/v3/urls",
+                            data=form_data,
+                            headers=headers
+                        ) as scan_response:
+                            if scan_response.status == 200:
+                                scan_data = await scan_response.json()
+                                analysis_id = scan_data["data"]["id"]
+                                analysis_url = f"https://www.virustotal.com/gui/url/{url_id}/detection"
+                                await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
+                                print(f"[SUCCESS] URL submitted for analysis. Analysis ID: {analysis_id}")
+                            else:
+                                error_text = await scan_response.text()
+                                await interaction.followup.send(f"Error submitting URL: {error_text}")
+                                print(f"[ERROR] Failed to submit URL: {error_text}")
+                    else:
+                        error_text = await response.text()
+                        await interaction.followup.send(f"Error: {error_text}")
+                        print(f"[ERROR] Failed to get URL report: {error_text}")
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
+            print(f"[ERROR] Failed to handle URL scan: {str(e)}")
     except Exception as e:
         print(f"[EXCEPTION] Unhandled error during URL scan: {str(e)}")
         await interaction.followup.send(f"❌ Error: {str(e)}")
@@ -121,39 +141,58 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
         print(f"[DEBUG] File SHA256: {sha256}")
 
         try:
-            # Run synchronous method in an async way
+            # Use direct HTTP request instead of vt client to avoid timeout issues
             print(f"[INFO] Attempting to get file report for {file.filename}")
-            def get_file_report():
-                return vt_client.get_object(f"/files/{sha256}")
-                
-            vt_file = await bot.loop.run_in_executor(None, get_file_report)
-            stats = vt_file.last_analysis_stats
-            print(f"[SUCCESS] Got file report. Stats: {stats}")
             
-            result = (
-                f"**Scan results for {file.filename}**\n"
-                f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
-                f"✅ **Undetected**: {stats.get('undetected', 0)}\n"
-                f"🔗 [View on VirusTotal](https://www.virustotal.com/gui/file/{sha256})"
-            )
-            await interaction.followup.send(result)
-            print(f"[RESPONSE] Sent file scan results to {interaction.user.name}")
-        except vt.APIError as e:
-            print(f"[API ERROR] {e.code}: {e.message}")
-            if e.code == 'NotFoundError':
-                print(f"[INFO] File not found, submitting for analysis: {file.filename}")
-                await interaction.followup.send("Submitting file for analysis...")
-                # Use synchronous method with run_in_executor
-                def scan_file_task():
-                    return vt_client.scan_file(file_content)
-                    
-                analysis = await bot.loop.run_in_executor(None, scan_file_task)
-                analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
-                await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
-                print(f"[SUCCESS] File submitted for analysis. Analysis ID: {analysis.id}")
-            else:
-                await interaction.followup.send(f"Error: {e.message}")
-                print(f"[ERROR] Failed to handle file scan: {e.message}")
+            # Create session and make request manually
+            async with aiohttp.ClientSession() as session:
+                headers = {"x-apikey": VT_API_KEY}
+                vt_url = f"https://www.virustotal.com/api/v3/files/{sha256}"
+                
+                async with session.get(vt_url, headers=headers) as response:
+                    if response.status == 200:
+                        data = await response.json()
+                        stats = data["data"]["attributes"]["last_analysis_stats"]
+                        print(f"[SUCCESS] Got file report. Stats: {stats}")
+                        
+                        result = (
+                            f"**Scan results for {file.filename}**\n"
+                            f"✅ **Malicious**: {stats.get('malicious', 0)}\n"
+                            f"✅ **Undetected**: {stats.get('undetected', 0)}\n"
+                            f"🔗 [View on VirusTotal](https://www.virustotal.com/gui/file/{sha256})"
+                        )
+                        await interaction.followup.send(result)
+                        print(f"[RESPONSE] Sent file scan results to {interaction.user.name}")
+                    elif response.status == 404:
+                        print(f"[INFO] File not found, submitting for analysis: {file.filename}")
+                        await interaction.followup.send("Submitting file for analysis...")
+                        
+                        # Submit file for scanning
+                        form_data = aiohttp.FormData()
+                        form_data.add_field('file', file_content, filename=file.filename)
+                        
+                        async with session.post(
+                            "https://www.virustotal.com/api/v3/files",
+                            data=form_data,
+                            headers=headers
+                        ) as scan_response:
+                            if scan_response.status == 200:
+                                scan_data = await scan_response.json()
+                                analysis_id = scan_data["data"]["id"]
+                                analysis_url = f"https://www.virustotal.com/gui/file/{sha256}/detection"
+                                await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
+                                print(f"[SUCCESS] File submitted for analysis. Analysis ID: {analysis_id}")
+                            else:
+                                error_text = await scan_response.text()
+                                await interaction.followup.send(f"Error submitting file: {error_text}")
+                                print(f"[ERROR] Failed to submit file: {error_text}")
+                    else:
+                        error_text = await response.text()
+                        await interaction.followup.send(f"Error: {error_text}")
+                        print(f"[ERROR] Failed to get file report: {error_text}")
+        except Exception as e:
+            await interaction.followup.send(f"Error: {str(e)}")
+            print(f"[ERROR] Failed to handle file scan: {str(e)}")
     except Exception as e:
         print(f"[EXCEPTION] Unhandled error during file scan: {str(e)}")
         await interaction.followup.send(f"❌ Error: {str(e)}")
