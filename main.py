@@ -1,7 +1,9 @@
 import discord
 import os
+from discord.flags import Intents
 
-client = discord.Client()
+intents = discord.Intents.default()
+client = discord.Client(intents=intents)
 
 @client.event
 async def on_ready():
