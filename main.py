@@ -59,9 +59,8 @@ async def scan_url(interaction: discord.Interaction, url: str):
         await interaction.response.defer()
         print(f"[INFO] Response deferred for URL scan of {url}")
 
-        # Generate URL ID
-        url_hash = hashlib.sha256(url.encode()).digest()
-        url_id = base64.urlsafe_b64encode(url_hash).decode().strip('=')
+        # Generate URL ID - correctly encode the URL for VirusTotal API
+        url_id = base64.urlsafe_b64encode(url.encode()).decode().strip('=')
         print(f"[DEBUG] Generated URL ID: {url_id} for {url}")
 
         # Use direct HTTP request instead of vt client to avoid timeout issues
