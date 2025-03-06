@@ -40,6 +40,11 @@ async def on_ready():
     except Exception as e:
         print(f"Failed to sync commands: {e}")
 
+@bot.tree.command(name="ping", description="Check bot's latency")
+async def ping(interaction: discord.Interaction):
+    latency = round(bot.latency * 1000)  # Convert to milliseconds
+    await interaction.response.send_message(f"pong! bitch ({latency}ms)")
+
 @bot.tree.command(name="scan", description="Scan a URL for malware")
 @app_commands.describe(url="The URL to scan")
 @app_commands.checks.cooldown(1, 10, key=lambda i: i.user.id)
