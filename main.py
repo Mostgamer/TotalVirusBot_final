@@ -6,7 +6,6 @@ import hashlib
 import base64
 from dotenv import load_dotenv
 import vt
-import asyncio
 
 load_dotenv()
 
@@ -18,11 +17,6 @@ intents.message_content = True
 
 bot = commands.Bot(command_prefix='!', intents=intents, status=discord.Status.dnd)
 vt_client = vt.Client(VT_API_KEY)
-
-# Helper function to run VT sync functions in a thread pool
-async def run_vt_async(func, *args, **kwargs):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, lambda: func(*args, **kwargs))
 
 @bot.event
 async def on_ready():
@@ -37,7 +31,6 @@ async def on_ready():
     try:
         synced = await bot.tree.sync()
         print(f"Synced {len(synced)} command(s)")
-        # Log each command that was synced
         for command in synced:
             print(f"Registered command: /{command.name}")
     except Exception as e:
@@ -45,7 +38,7 @@ async def on_ready():
 
 @bot.tree.command(name="ping", description="Check bot's latency")
 async def ping(interaction: discord.Interaction):
-    latency = round(bot.latency * 1000)  # Convert to milliseconds
+    latency = round(bot.latency * 1000)
     print(f"Ping command executed by {interaction.user.name} with latency {latency}ms")
     await interaction.response.send_message(f"pong! ({latency}ms)")
 
@@ -65,8 +58,8 @@ async def scan_url(interaction: discord.Interaction, url: str):
         url_id = base64.urlsafe_b64encode(url_hash).decode().strip('=')
 
         try:
-            # Use synchronous client methods with our async helper
-            url_report = await run_vt_async(vt_client.get_object, f"/urls/{url_id}")
+            # Use proper async method
+            url_report = await vt_client.get_object_async(f"/urls/{url_id}")
             stats = url_report.last_analysis_stats
             result = (
                 f"**Scan results for {url}**\n"
@@ -78,7 +71,8 @@ async def scan_url(interaction: discord.Interaction, url: str):
         except vt.APIError as e:
             if e.code == 'NotFoundError':
                 await interaction.followup.send("Submitting URL for analysis...")
-                analysis = await run_vt_async(vt_client.scan_url, url)
+                # Use proper async scan method
+                analysis = await vt_client.scan_url_async(url)
                 analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
                 await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
             else:
@@ -100,8 +94,8 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
         sha256 = hashlib.sha256(file_content).hexdigest()
 
         try:
-            # Use synchronous client methods with our async helper
-            vt_file = await run_vt_async(vt_client.get_object, f"/files/{sha256}")
+            # Use proper async method
+            vt_file = await vt_client.get_object_async(f"/files/{sha256}")
             stats = vt_file.last_analysis_stats
             result = (
                 f"**Scan results for {file.filename}**\n"
@@ -113,7 +107,8 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
         except vt.APIError as e:
             if e.code == 'NotFoundError':
                 await interaction.followup.send("Submitting file for analysis...")
-                analysis = await run_vt_async(vt_client.scan_file, file_content)
+                # Use proper async scan method
+                analysis = await vt_client.scan_file_async(file_content)
                 analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
                 await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
             else:
