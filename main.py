@@ -64,9 +64,12 @@ async def scan_url(interaction: discord.Interaction, url: str):
         print(f"[DEBUG] Generated URL ID: {url_id} for {url}")
 
         try:
-            # Use proper async method
+            # Run synchronous method in an async way
             print(f"[INFO] Attempting to get URL report for {url}")
-            url_report = await vt_client.get_object_async(f"/urls/{url_id}")
+            def get_url_report():
+                return vt_client.get_object(f"/urls/{url_id}")
+                
+            url_report = await bot.loop.run_in_executor(None, get_url_report)
             stats = url_report.last_analysis_stats
             print(f"[SUCCESS] Got URL report. Stats: {stats}")
             
@@ -83,8 +86,11 @@ async def scan_url(interaction: discord.Interaction, url: str):
             if e.code == 'NotFoundError':
                 print(f"[INFO] URL not found, submitting for analysis: {url}")
                 await interaction.followup.send("Submitting URL for analysis...")
-                # Use proper async scan method
-                analysis = await vt_client.scan_url_async(url)
+                # Use synchronous method with run_in_executor
+                def scan_url_task():
+                    return vt_client.scan_url(url)
+                    
+                analysis = await bot.loop.run_in_executor(None, scan_url_task)
                 analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
                 await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
                 print(f"[SUCCESS] URL submitted for analysis. Analysis ID: {analysis.id}")
@@ -115,9 +121,12 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
         print(f"[DEBUG] File SHA256: {sha256}")
 
         try:
-            # Use proper async method
+            # Run synchronous method in an async way
             print(f"[INFO] Attempting to get file report for {file.filename}")
-            vt_file = await vt_client.get_object_async(f"/files/{sha256}")
+            def get_file_report():
+                return vt_client.get_object(f"/files/{sha256}")
+                
+            vt_file = await bot.loop.run_in_executor(None, get_file_report)
             stats = vt_file.last_analysis_stats
             print(f"[SUCCESS] Got file report. Stats: {stats}")
             
@@ -134,8 +143,11 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
             if e.code == 'NotFoundError':
                 print(f"[INFO] File not found, submitting for analysis: {file.filename}")
                 await interaction.followup.send("Submitting file for analysis...")
-                # Use proper async scan method
-                analysis = await vt_client.scan_file_async(file_content)
+                # Use synchronous method with run_in_executor
+                def scan_file_task():
+                    return vt_client.scan_file(file_content)
+                    
+                analysis = await bot.loop.run_in_executor(None, scan_file_task)
                 analysis_url = f"https://www.virustotal.com/gui/analysis/{analysis.id}"
                 await interaction.followup.send(f"Analysis submitted!\n🔗 [View results]({analysis_url})")
                 print(f"[SUCCESS] File submitted for analysis. Analysis ID: {analysis.id}")
