@@ -85,23 +85,23 @@ async def scan_url(interaction: discord.Interaction, url: str):
                             title=f"Scan results for {url}",
                             color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
                         )
-
+                        
                         # Add fields with scan statistics
                         embed.add_field(name="Malicious", value=str(stats.get('malicious', 0)), inline=True)
                         embed.add_field(name="Suspicious", value=str(stats.get('suspicious', 0)), inline=True)
                         embed.add_field(name="Undetected", value=str(stats.get('undetected', 0)), inline=True)
                         embed.add_field(name="Harmless", value=str(stats.get('harmless', 0)), inline=True)
-
+                        
                         # Set footer with VirusTotal link and icon
                         embed.set_footer(
-                            text="🦠 Results",
+                            text="View on VirusTotal",
                             icon_url="https://www.virustotal.com/gui/images/favicon.png"
                         )
-
+                        
                         # Add VirusTotal URL to the embed
                         vt_url = f"https://www.virustotal.com/gui/url/{url_id}"
                         embed.url = vt_url
-
+                        
                         # Send the embed
                         await interaction.followup.send(embed=embed)
                         print(f"[RESPONSE] Sent URL scan results to {interaction.user.name}")
@@ -123,7 +123,7 @@ async def scan_url(interaction: discord.Interaction, url: str):
                                 scan_data = await scan_response.json()
                                 analysis_id = scan_data["data"]["id"]
                                 analysis_url = f"https://www.virustotal.com/gui/url/{url_id}/detection"
-
+                                
                                 # Create an embed for submission
                                 embed = discord.Embed(
                                     title="Analysis submitted!",
@@ -131,13 +131,13 @@ async def scan_url(interaction: discord.Interaction, url: str):
                                     color=0x3366FF,
                                     url=analysis_url
                                 )
-
+                                
                                 # Set footer with VirusTotal link and icon
                                 embed.set_footer(
                                     text="View on VirusTotal",
                                     icon_url="https://www.virustotal.com/gui/images/favicon.png"
                                 )
-
+                                
                                 await interaction.followup.send(embed=embed)
                                 print(f"[SUCCESS] URL submitted for analysis. Analysis ID: {analysis_id}")
                             else:
@@ -208,23 +208,23 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                             title=f"Scan results for {file.filename}",
                             color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
                         )
-
+                        
                         # Add fields with scan statistics
                         embed.add_field(name="Malicious", value=str(stats.get('malicious', 0)), inline=True)
                         embed.add_field(name="Suspicious", value=str(stats.get('suspicious', 0)), inline=True)
                         embed.add_field(name="Undetected", value=str(stats.get('undetected', 0)), inline=True)
                         embed.add_field(name="Harmless", value=str(stats.get('harmless', 0)), inline=True)
-
+                        
                         # Set footer with VirusTotal link and icon
                         embed.set_footer(
-                            text="🦠 Results",
+                            text="View on VirusTotal",
                             icon_url="https://www.virustotal.com/gui/images/favicon.png"
                         )
-
+                        
                         # Add VirusTotal URL to the embed
                         vt_url = f"https://www.virustotal.com/gui/file/{sha256}"
                         embed.url = vt_url
-
+                        
                         # Send the embed
                         await interaction.followup.send(embed=embed)
                         print(f"[RESPONSE] Sent file scan results to {interaction.user.name}")
@@ -245,7 +245,7 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                                 scan_data = await scan_response.json()
                                 analysis_id = scan_data["data"]["id"]
                                 analysis_url = f"https://www.virustotal.com/gui/file/{sha256}/detection"
-
+                                
                                 # Create an embed for submission
                                 embed = discord.Embed(
                                     title="Analysis submitted!",
@@ -253,13 +253,13 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                                     color=0x3366FF,
                                     url=analysis_url
                                 )
-
+                                
                                 # Set footer with VirusTotal link and icon
                                 embed.set_footer(
                                     text="View on VirusTotal",
                                     icon_url="https://www.virustotal.com/gui/images/favicon.png"
                                 )
-
+                                
                                 await interaction.followup.send(embed=embed)
                                 print(f"[SUCCESS] File submitted for analysis. Analysis ID: {analysis_id}")
                             else:
