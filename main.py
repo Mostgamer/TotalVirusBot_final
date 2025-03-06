@@ -83,24 +83,23 @@ async def scan_url(interaction: discord.Interaction, url: str):
                         # Create an embed with the scan results
                         embed = discord.Embed(
                             title=f"Scan results for {url}",
-                            color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
-                        )
-                        
-                        # Add fields with scan statistics
-                        embed.add_field(name="Malicious", value=str(stats.get('malicious', 0)), inline=True)
-                        embed.add_field(name="Suspicious", value=str(stats.get('suspicious', 0)), inline=True)
-                        embed.add_field(name="Undetected", value=str(stats.get('undetected', 0)), inline=True)
-                        embed.add_field(name="Harmless", value=str(stats.get('harmless', 0)), inline=True)
-                        
-                        # Set footer with VirusTotal link and icon
-                        embed.set_footer(
-                            text="View on VirusTotal",
-                            icon_url="https://www.virustotal.com/gui/images/favicon.png"
+                            color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333,
+                            description="```\n🕸️ Detection Spider Net 🕸️\n\n"
+                                      + f"  Malicious: {stats.get('malicious', 0)}\n"
+                                      + f"  Suspicious: {stats.get('suspicious', 0)}\n"
+                                      + f"  Undetected: {stats.get('undetected', 0)}\n"
+                                      + f"  Harmless: {stats.get('harmless', 0)}\n```"
                         )
                         
                         # Add VirusTotal URL to the embed
                         vt_url = f"https://www.virustotal.com/gui/url/{url_id}"
                         embed.url = vt_url
+                        
+                        # Set footer with VirusTotal link and icon
+                        embed.set_footer(
+                            text="🦠 Results: " + vt_url,
+                            icon_url="https://www.virustotal.com/gui/images/favicon.png"
+                        )
                         
                         # Send the embed
                         await interaction.followup.send(embed=embed)
@@ -206,24 +205,23 @@ async def scan_file(interaction: discord.Interaction, file: discord.Attachment):
                         # Create an embed with the scan results
                         embed = discord.Embed(
                             title=f"Scan results for {file.filename}",
-                            color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333
-                        )
-                        
-                        # Add fields with scan statistics
-                        embed.add_field(name="Malicious", value=str(stats.get('malicious', 0)), inline=True)
-                        embed.add_field(name="Suspicious", value=str(stats.get('suspicious', 0)), inline=True)
-                        embed.add_field(name="Undetected", value=str(stats.get('undetected', 0)), inline=True)
-                        embed.add_field(name="Harmless", value=str(stats.get('harmless', 0)), inline=True)
-                        
-                        # Set footer with VirusTotal link and icon
-                        embed.set_footer(
-                            text="View on VirusTotal",
-                            icon_url="https://www.virustotal.com/gui/images/favicon.png"
+                            color=0x66AA33 if stats.get('malicious', 0) == 0 else 0xAA3333,
+                            description="```\n🕸️ Detection Spider Net 🕸️\n\n"
+                                      + f"  Malicious: {stats.get('malicious', 0)}\n"
+                                      + f"  Suspicious: {stats.get('suspicious', 0)}\n"
+                                      + f"  Undetected: {stats.get('undetected', 0)}\n"
+                                      + f"  Harmless: {stats.get('harmless', 0)}\n```"
                         )
                         
                         # Add VirusTotal URL to the embed
                         vt_url = f"https://www.virustotal.com/gui/file/{sha256}"
                         embed.url = vt_url
+                        
+                        # Set footer with VirusTotal link and icon
+                        embed.set_footer(
+                            text="🦠 Results: " + vt_url,
+                            icon_url="https://www.virustotal.com/gui/images/favicon.png"
+                        )
                         
                         # Send the embed
                         await interaction.followup.send(embed=embed)
