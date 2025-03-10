@@ -41,7 +41,7 @@ async def on_ready():
 async def ping(interaction: discord.Interaction):
     latency = round(bot.latency * 1000)
     print(f"[COMMAND] Ping command executed by {interaction.user.name} (ID: {interaction.user.id}) with latency {latency}ms")
-    await interaction.response.send_message(f"pong! ({latency}ms)")
+    await interaction.response.send_message(f"pong🏓! ({latency}ms)")
     print(f"[RESPONSE] Sent ping response to {interaction.user.name}: {latency}ms")
 
 @bot.tree.command(name="scan", description="Scan a URL for malware")
